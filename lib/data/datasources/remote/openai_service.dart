@@ -41,6 +41,6 @@ class OpenAIService {
       temperature: config.temperature,
     );
 
-    return stream.map((event) => event.choices.first.delta.content?.first.text ?? '');
+    return stream.map((event) => event.choices.first.delta.content?.first?.text ?? '');
   }
 }
