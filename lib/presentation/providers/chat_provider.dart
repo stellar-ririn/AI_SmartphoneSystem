@@ -116,22 +116,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
-    // Check API Key
-    if (_apiKey.isEmpty) {
-      final errorMessage = ChatMessage(
-        id: const Uuid().v4(),
-        content: 'Please set your API Key in Settings to start chatting.',
-        role: MessageRole.assistant,
-        timestamp: DateTime.now(),
-      );
-      state = state.copyWith(messages: [...state.messages, errorMessage]);
-      return;
-    }
-
     // Stop previous
     _audioManager.clear();
     await _ttsService.stop();
 
+    // Add User Message first so it appears in UI
     final userMessage = ChatMessage(
       id: const Uuid().v4(),
       content: text,
@@ -144,6 +133,21 @@ class ChatNotifier extends StateNotifier<ChatState> {
       isLoading: true,
       currentStreamResponse: '',
     );
+
+    // Check API Key
+    if (_apiKey.isEmpty) {
+      final errorMessage = ChatMessage(
+        id: const Uuid().v4(),
+        content: 'Please set your API Key in Settings to start chatting.',
+        role: MessageRole.assistant,
+        timestamp: DateTime.now(),
+      );
+      state = state.copyWith(
+        messages: [...state.messages, errorMessage],
+        isLoading: false, // Stop loading
+      );
+      return;
+    }
 
     await _processResponse(text, isInternal: false);
   }

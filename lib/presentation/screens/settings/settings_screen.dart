@@ -1,18 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/settings_provider.dart';
-// import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../providers/chat_provider.dart'; // For aiConfigProvider
+import '../../domain/entities/ai_config.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final aiConfig = ref.watch(aiConfigProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const Text('AI Provider', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<AIProvider>(
+            value: aiConfig.provider,
+            items: AIProvider.values.map((provider) {
+              return DropdownMenuItem(
+                value: provider,
+                child: Text(provider.toString().split('.').last.toUpperCase()),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                ref.read(aiConfigProvider.notifier).state = aiConfig.copyWith(provider: value);
+              }
+            },
+            decoration: const InputDecoration(border: OutlineInputBorder()),
+          ),
+          const SizedBox(height: 24),
           const Text('API Keys (Stored Locally)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           TextField(
