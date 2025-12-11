@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/chat_provider.dart';
-import '../../domain/entities/chat_message.dart' as domain;
+import 'package:ai_assistant_app/domain/entities/chat_message.dart' as domain;
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
