@@ -23,7 +23,13 @@ A specialized AI Assistant application built with Flutter, Riverpod, and Clean A
     flutter pub get
     ```
 
-2.  **Fix Android NDK Issue:**
+2.  **Generate Code:**
+    This project uses code generation for models and providers.
+    ```bash
+    dart run build_runner build
+    ```
+
+3.  **Fix Android NDK Issue:**
     If you encounter an error regarding "Android NDK version 27.0.12077973", run the included fix script:
     ```bash
     dart bin/fix_ndk.dart

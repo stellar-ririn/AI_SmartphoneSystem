@@ -5,13 +5,18 @@ import '../../data/repositories/ai_repository_impl.dart';
 import '../../data/datasources/remote/gemini_service.dart';
 import '../../data/datasources/remote/openai_service.dart';
 import 'package:uuid/uuid.dart';
+import '../../core/utils/audio_player_manager.dart';
+import 'voice_provider.dart';
+import 'settings_provider.dart';
 
 // --- Data Sources & Repositories Providers ---
+
+import '../../domain/repositories/ai_repository.dart';
 
 final geminiServiceProvider = Provider((ref) => GeminiService());
 final openAIServiceProvider = Provider((ref) => OpenAIService());
 
-final aiRepositoryProvider = Provider<AIRepositoryImpl>((ref) {
+final aiRepositoryProvider = Provider<AIRepository>((ref) {
   return AIRepositoryImpl(
     geminiService: ref.watch(geminiServiceProvider),
     openAIService: ref.watch(openAIServiceProvider),
@@ -29,9 +34,12 @@ final aiConfigProvider = StateProvider<AIConfig>((ref) {
 });
 
 final apiKeyProvider = Provider<String>((ref) {
-  // TODO: Retrieve from FlutterSecureStorage based on selected provider
-  // For safety, return empty string. User must input it.
-  return '';
+  final config = ref.watch(aiConfigProvider);
+  if (config.provider == AIProvider.gemini) {
+    return ref.watch(geminiKeyProvider);
+  } else {
+    return ref.watch(openaiKeyProvider);
+  }
 });
 
 // --- Chat State ---
@@ -61,17 +69,25 @@ class ChatState {
 }
 
 class ChatNotifier extends StateNotifier<ChatState> {
-  final AIRepositoryImpl _repository;
+  final AIRepository _repository;
   final AIConfig _config;
   final String _apiKey;
+  final AudioPlayerManager _audioManager;
+  final TextToSpeechService _ttsService;
+  final VoiceConfig _voiceConfig;
 
   ChatNotifier({
-    required AIRepositoryImpl repository,
+    required AIRepository repository,
     required AIConfig config,
     required String apiKey,
+    required TextToSpeechService ttsService,
+    required VoiceConfig voiceConfig,
   })  : _repository = repository,
         _config = config,
         _apiKey = apiKey,
+        _ttsService = ttsService,
+        _voiceConfig = voiceConfig,
+        _audioManager = AudioPlayerManager(),
         super(ChatState(messages: []));
 
   Future<void> sendMessage(String text) async {
@@ -80,6 +96,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
       // Handle missing API key error
       return;
     }
+
+    // Stop any previous audio
+    _audioManager.clear();
+    await _ttsService.stop();
 
     final userMessage = ChatMessage(
       id: const Uuid().v4(),
@@ -103,11 +123,28 @@ class ChatNotifier extends StateNotifier<ChatState> {
       );
 
       String fullResponse = '';
+      // Simple buffering for TTS to avoid chopping sentences too much
+      // Ideally we should wait for punctuation (. ? !)
+      String ttsBuffer = '';
+
       await for (final chunk in stream) {
         fullResponse += chunk;
+        ttsBuffer += chunk;
+
+        // Check for punctuation to flush to TTS
+        if (ttsBuffer.contains(RegExp(r'[.!?。！？\n]'))) {
+          _queueTts(ttsBuffer);
+          ttsBuffer = '';
+        }
+
         state = state.copyWith(
           currentStreamResponse: fullResponse,
         );
+      }
+
+      // Flush remaining
+      if (ttsBuffer.isNotEmpty) {
+        _queueTts(ttsBuffer);
       }
 
       final aiMessage = ChatMessage(
@@ -131,16 +168,31 @@ class ChatNotifier extends StateNotifier<ChatState> {
       );
     }
   }
+
+  void _queueTts(String text) {
+    if (_voiceConfig.type == VoiceType.off) return;
+
+    _audioManager.enqueue(AudioTask(
+      text: text,
+      service: _ttsService,
+      voiceId: _voiceConfig.voiceId,
+      speed: _voiceConfig.speed,
+    ));
+  }
 }
 
 final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) {
   final repo = ref.watch(aiRepositoryProvider);
   final config = ref.watch(aiConfigProvider);
   final apiKey = ref.watch(apiKeyProvider);
+  final ttsService = ref.watch(ttsServiceProvider);
+  final voiceConfig = ref.watch(voiceConfigProvider);
 
   return ChatNotifier(
     repository: repo,
     config: config,
     apiKey: apiKey,
+    ttsService: ttsService,
+    voiceConfig: voiceConfig,
   );
 });
