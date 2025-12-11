@@ -86,28 +86,19 @@ class ChatState {
 }
 
 class ChatNotifier extends StateNotifier<ChatState> {
+  final Ref _ref;
   final AIRepository _repository;
-  final AIConfig _config;
-  final String _apiKey;
   final AudioPlayerManager _audioManager;
-  final TextToSpeechService _ttsService;
-  final VoiceConfig _voiceConfig;
   final CalendarService _calendarService;
   final NewsService _newsService;
 
   ChatNotifier({
+    required Ref ref,
     required AIRepository repository,
-    required AIConfig config,
-    required String apiKey,
-    required TextToSpeechService ttsService,
-    required VoiceConfig voiceConfig,
     required CalendarService calendarService,
     required NewsService newsService,
-  })  : _repository = repository,
-        _config = config,
-        _apiKey = apiKey,
-        _ttsService = ttsService,
-        _voiceConfig = voiceConfig,
+  })  : _ref = ref,
+        _repository = repository,
         _calendarService = calendarService,
         _newsService = newsService,
         _audioManager = AudioPlayerManager(),
@@ -116,9 +107,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
+    final ttsService = _ref.read(ttsServiceProvider);
+
     // Stop previous
     _audioManager.clear();
-    await _ttsService.stop();
+    await ttsService.stop();
 
     // Add User Message first so it appears in UI
     final userMessage = ChatMessage(
@@ -134,11 +127,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
       currentStreamResponse: '',
     );
 
+    final apiKey = _ref.read(apiKeyProvider);
+    final config = _ref.read(aiConfigProvider);
+
     // Check API Key
-    if (_apiKey.isEmpty) {
+    if (apiKey.isEmpty) {
       final errorMessage = ChatMessage(
         id: const Uuid().v4(),
-        content: 'Please set your API Key in Settings to start chatting.',
+        content: 'Please set your API Key for ${config.provider.name.toUpperCase()} in Settings to start chatting.',
         role: MessageRole.assistant,
         timestamp: DateTime.now(),
       );
@@ -153,6 +149,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
   }
 
   Future<void> _processResponse(String input, {bool isInternal = false}) async {
+    final config = _ref.read(aiConfigProvider);
+    final apiKey = _ref.read(apiKeyProvider);
+
     try {
       // If isInternal (tool loop), the history includes everything in state.
       // If not internal (user sent message), the last message in state is 'input', so we exclude it from history
@@ -164,8 +163,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final stream = _repository.sendMessage(
         message: input,
         history: historyForAI,
-        config: _config,
-        apiKey: _apiKey,
+        config: config,
+        apiKey: apiKey,
       );
 
       String fullResponse = '';
@@ -271,32 +270,30 @@ class ChatNotifier extends StateNotifier<ChatState> {
   }
 
   void _queueTts(String text) {
-    if (_voiceConfig.type == VoiceType.off) return;
+    final voiceConfig = _ref.read(voiceConfigProvider);
+    final ttsService = _ref.read(ttsServiceProvider);
+
+    if (voiceConfig.type == VoiceType.off) return;
 
     _audioManager.enqueue(AudioTask(
       text: text,
-      service: _ttsService,
-      voiceId: _voiceConfig.voiceId,
-      speed: _voiceConfig.speed,
+      service: ttsService,
+      voiceId: voiceConfig.voiceId,
+      speed: voiceConfig.speed,
     ));
   }
 }
 
 final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) {
   final repo = ref.watch(aiRepositoryProvider);
-  final config = ref.watch(aiConfigProvider);
-  final apiKey = ref.watch(apiKeyProvider);
-  final ttsService = ref.watch(ttsServiceProvider);
-  final voiceConfig = ref.watch(voiceConfigProvider);
+  // We do NOT watch volatile providers (config, key, voice) here to prevent
+  // the ChatNotifier (and chat history) from resetting when settings change.
   final calendarService = ref.watch(calendarServiceProvider);
   final newsService = ref.watch(newsServiceProvider);
 
   return ChatNotifier(
+    ref: ref,
     repository: repo,
-    config: config,
-    apiKey: apiKey,
-    ttsService: ttsService,
-    voiceConfig: voiceConfig,
     calendarService: calendarService,
     newsService: newsService,
   );

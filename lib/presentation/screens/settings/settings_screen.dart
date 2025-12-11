@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/chat_provider.dart'; // For aiConfigProvider
-import '../../domain/entities/ai_config.dart';
+import 'package:ai_assistant_app/domain/entities/ai_config.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
