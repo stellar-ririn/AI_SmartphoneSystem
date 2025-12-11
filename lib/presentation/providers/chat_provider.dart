@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/chat_message.dart';
 import '../../domain/entities/ai_config.dart';
+import '../../domain/services/tts_service.dart';
 import '../../data/repositories/ai_repository_impl.dart';
 import '../../data/datasources/remote/gemini_service.dart';
 import '../../data/datasources/remote/openai_service.dart';
