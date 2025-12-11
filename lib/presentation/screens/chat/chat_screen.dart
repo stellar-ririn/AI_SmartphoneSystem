@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/chat_provider.dart';
-import '../../domain/entities/chat_message.dart';
+import '../../domain/entities/chat_message.dart' as domain;
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -80,11 +80,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 }
 
                 final message = chatState.messages[index];
-                if (message.role == MessageRole.system) return const SizedBox.shrink();
+                if (message.role == domain.MessageRole.system) return const SizedBox.shrink();
 
                 return _MessageBubble(
                   content: message.content,
-                  isUser: message.role == MessageRole.user,
+                  isUser: message.role == domain.MessageRole.user,
                 );
               },
             ),
