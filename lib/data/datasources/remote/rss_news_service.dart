@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:webfeed_plus/webfeed_plus.dart';
-import '../../domain/services/news_service.dart';
+import 'package:ai_assistant_app/domain/services/news_service.dart';
 
 class RssNewsService implements NewsService {
   final Dio _dio;

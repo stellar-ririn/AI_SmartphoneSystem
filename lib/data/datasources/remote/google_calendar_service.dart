@@ -1,7 +1,7 @@
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/calendar/v3.dart' as calendar;
 import 'package:http/http.dart' as http;
-import '../../domain/services/calendar_service.dart';
+import 'package:ai_assistant_app/domain/services/calendar_service.dart';
 
 class GoogleCalendarService implements CalendarService {
   final GoogleSignIn _googleSignIn;
