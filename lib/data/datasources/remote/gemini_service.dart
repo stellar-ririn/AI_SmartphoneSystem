@@ -18,26 +18,24 @@ class GeminiService {
     );
 
     // Convert history to Gemini Content
-    final chatHistory = history.map((msg) {
+    final contents = history.map((msg) {
       if (msg.role == MessageRole.user) {
+        return Content.text(msg.content);
+      } else if (msg.role == MessageRole.system) {
+        // Map system messages (tool results) to User role for Gemini context
+        // so it acts as "Observation" input.
         return Content.text(msg.content);
       } else {
         return Content.model([TextPart(msg.content)]);
       }
     }).toList();
 
-    // Add System Prompt if supported (Gemini usually takes it as context or separate param in newer APIs,
-    // but for simple chat, prepending it to the first message or using startChat is common.
-    // However, google_generative_ai supports systemInstruction in recent versions, check version.
-    // ^0.2.0 might be old. Let's assume basic chat for now or prepend.)
+    // Add current message if it exists
+    if (message.isNotEmpty) {
+      contents.add(Content.text(message));
+    }
 
-    // Create chat session
-    final chat = model.startChat(history: chatHistory);
-
-    // Send message
-    final content = Content.text(message);
-    final response = chat.sendMessageStream(content);
-
+    final response = model.generateContentStream(contents);
     return response.map((event) => event.text ?? '');
   }
 }

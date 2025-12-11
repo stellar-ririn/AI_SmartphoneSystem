@@ -115,7 +115,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
-    if (_apiKey.isEmpty) return;
+
+    // Check API Key
+    if (_apiKey.isEmpty) {
+      final errorMessage = ChatMessage(
+        id: const Uuid().v4(),
+        content: 'Please set your API Key in Settings to start chatting.',
+        role: MessageRole.assistant,
+        timestamp: DateTime.now(),
+      );
+      state = state.copyWith(messages: [...state.messages, errorMessage]);
+      return;
+    }
 
     // Stop previous
     _audioManager.clear();
@@ -134,16 +145,21 @@ class ChatNotifier extends StateNotifier<ChatState> {
       currentStreamResponse: '',
     );
 
-    await _processResponse(text);
+    await _processResponse(text, isInternal: false);
   }
 
-  Future<void> _processResponse(String input) async {
+  Future<void> _processResponse(String input, {bool isInternal = false}) async {
     try {
+      // If isInternal (tool loop), the history includes everything in state.
+      // If not internal (user sent message), the last message in state is 'input', so we exclude it from history
+      // to avoid duplication in the API call (as services append 'input' manually).
+      final historyForAI = isInternal
+          ? state.messages
+          : state.messages.sublist(0, state.messages.length - 1);
+
       final stream = _repository.sendMessage(
         message: input,
-        // We must include system messages because they contain Tool Results.
-        // The "Persona" system prompt is handled separately by the Service using `config`.
-        history: state.messages,
+        history: historyForAI,
         config: _config,
         apiKey: _apiKey,
       );
@@ -191,11 +207,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
 
     } catch (e) {
-      // TODO: Handle error properly
+      final errorMessage = ChatMessage(
+        id: const Uuid().v4(),
+        content: 'Error: $e',
+        role: MessageRole.assistant,
+        timestamp: DateTime.now(),
+      );
+
       state = state.copyWith(
         isLoading: false,
         currentStreamResponse: null,
-        // Add error message to chat or show snackbar
+        messages: [...state.messages, errorMessage],
       );
     }
   }
@@ -239,8 +261,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
       messages: [...state.messages, resultMsg],
     );
 
-    // Recursively call to get the final answer
-    await _processResponse("Based on the tool result, answer the user.");
+    // Recursively call to get the final answer.
+    // We pass an empty string because the 'prompt' is already embedded in the resultMsg above.
+    await _processResponse("", isInternal: true);
   }
 
   void _queueTts(String text) {
