@@ -30,10 +30,12 @@ class OpenAIService {
     ));
 
     // Add current user message
-    messages.add(OpenAIChatCompletionChoiceMessageModel(
-       content: [OpenAIChatCompletionChoiceMessageContentItemModel.text(message)],
-       role: OpenAIChatMessageRole.user,
-    ));
+    if (message.isNotEmpty) {
+      messages.add(OpenAIChatCompletionChoiceMessageModel(
+         content: [OpenAIChatCompletionChoiceMessageContentItemModel.text(message)],
+         role: OpenAIChatMessageRole.user,
+      ));
+    }
 
     final stream = OpenAI.instance.chat.createStream(
       model: config.modelName, // e.g., 'gpt-3.5-turbo'
