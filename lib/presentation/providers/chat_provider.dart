@@ -2,13 +2,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/chat_message.dart';
 import '../../domain/entities/ai_config.dart';
 import '../../domain/services/tts_service.dart';
+import '../../domain/services/calendar_service.dart';
+import '../../domain/services/news_service.dart';
 import '../../data/repositories/ai_repository_impl.dart';
 import '../../data/datasources/remote/gemini_service.dart';
 import '../../data/datasources/remote/openai_service.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/utils/audio_player_manager.dart';
+import '../../core/utils/function_parser.dart';
 import 'voice_provider.dart';
 import 'settings_provider.dart';
+import 'assistant_provider.dart';
 
 // --- Data Sources & Repositories Providers ---
 
@@ -27,10 +31,22 @@ final aiRepositoryProvider = Provider<AIRepository>((ref) {
 // --- Settings Providers (Mock for now, will connect to SecureStorage later) ---
 
 final aiConfigProvider = StateProvider<AIConfig>((ref) {
+  const systemPrompt = '''
+You are a helpful AI assistant. You have access to the following tools:
+
+1. calendar_list: Get upcoming events. JSON: { "tool": "calendar_list" }
+2. calendar_create: Create an event. JSON: { "tool": "calendar_create", "title": "Meeting", "startTime": "2024-01-01T10:00:00", "endTime": "2024-01-01T11:00:00" }
+3. news_summary: Get latest news headlines. JSON: { "tool": "news_summary" }
+
+If the user asks for something requiring these tools, output ONLY the JSON command.
+Do not wrap JSON in markdown blocks.
+If no tool is needed, respond normally.
+''';
+
   return const AIConfig(
     provider: AIProvider.gemini,
     modelName: 'gemini-pro',
-    systemPrompt: 'You are a helpful and friendly assistant.',
+    systemPrompt: systemPrompt,
   );
 });
 
@@ -76,6 +92,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
   final AudioPlayerManager _audioManager;
   final TextToSpeechService _ttsService;
   final VoiceConfig _voiceConfig;
+  final CalendarService _calendarService;
+  final NewsService _newsService;
 
   ChatNotifier({
     required AIRepository repository,
@@ -83,22 +101,23 @@ class ChatNotifier extends StateNotifier<ChatState> {
     required String apiKey,
     required TextToSpeechService ttsService,
     required VoiceConfig voiceConfig,
+    required CalendarService calendarService,
+    required NewsService newsService,
   })  : _repository = repository,
         _config = config,
         _apiKey = apiKey,
         _ttsService = ttsService,
         _voiceConfig = voiceConfig,
+        _calendarService = calendarService,
+        _newsService = newsService,
         _audioManager = AudioPlayerManager(),
         super(ChatState(messages: []));
 
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
-    if (_apiKey.isEmpty) {
-      // Handle missing API key error
-      return;
-    }
+    if (_apiKey.isEmpty) return;
 
-    // Stop any previous audio
+    // Stop previous
     _audioManager.clear();
     await _ttsService.stop();
 
@@ -115,36 +134,40 @@ class ChatNotifier extends StateNotifier<ChatState> {
       currentStreamResponse: '',
     );
 
+    await _processResponse(text);
+  }
+
+  Future<void> _processResponse(String input) async {
     try {
       final stream = _repository.sendMessage(
-        message: text,
-        history: state.messages.where((m) => m.role != MessageRole.system).toList(),
+        message: input,
+        // We must include system messages because they contain Tool Results.
+        // The "Persona" system prompt is handled separately by the Service using `config`.
+        history: state.messages,
         config: _config,
         apiKey: _apiKey,
       );
 
       String fullResponse = '';
-      // Simple buffering for TTS to avoid chopping sentences too much
-      // Ideally we should wait for punctuation (. ? !)
       String ttsBuffer = '';
 
       await for (final chunk in stream) {
         fullResponse += chunk;
         ttsBuffer += chunk;
 
-        // Check for punctuation to flush to TTS
-        if (ttsBuffer.contains(RegExp(r'[.!?。！？\n]'))) {
-          _queueTts(ttsBuffer);
-          ttsBuffer = '';
+        // Don't speak tool commands (starting with {)
+        if (!fullResponse.trimLeft().startsWith('{')) {
+          if (ttsBuffer.contains(RegExp(r'[.!?。！？\n]'))) {
+             _queueTts(ttsBuffer);
+             ttsBuffer = '';
+          }
         }
 
-        state = state.copyWith(
-          currentStreamResponse: fullResponse,
-        );
+        state = state.copyWith(currentStreamResponse: fullResponse);
       }
 
-      // Flush remaining
-      if (ttsBuffer.isNotEmpty) {
+      // Flush TTS if not tool
+      if (ttsBuffer.isNotEmpty && !fullResponse.trimLeft().startsWith('{')) {
         _queueTts(ttsBuffer);
       }
 
@@ -160,6 +183,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
         isLoading: false,
         currentStreamResponse: null,
       );
+
+      // Check for Tool Call
+      final toolCall = FunctionParser.parse(fullResponse);
+      if (toolCall != null) {
+        await _handleToolCall(toolCall);
+      }
+
     } catch (e) {
       // TODO: Handle error properly
       state = state.copyWith(
@@ -168,6 +198,49 @@ class ChatNotifier extends StateNotifier<ChatState> {
         // Add error message to chat or show snackbar
       );
     }
+  }
+
+  Future<void> _handleToolCall(FunctionCall call) async {
+    String toolResult = '';
+    state = state.copyWith(isLoading: true, currentStreamResponse: 'Processing tool: ${call.name}...');
+
+    try {
+      if (call.name == 'calendar_list') {
+        final events = await _calendarService.getUpcomingEvents();
+        toolResult = "Calendar Events:\n${events.join('\n')}";
+      } else if (call.name == 'calendar_create') {
+        // Simple parsing of args, assuming ISO strings or handled by service
+        final title = call.args['title'] ?? 'New Event';
+        final start = DateTime.tryParse(call.args['startTime'] ?? '') ?? DateTime.now();
+        final end = DateTime.tryParse(call.args['endTime'] ?? '') ?? start.add(const Duration(hours: 1));
+        await _calendarService.createEvent(title: title, startTime: start, endTime: end);
+        toolResult = "Event '$title' created successfully.";
+      } else if (call.name == 'news_summary') {
+        toolResult = await _newsService.getNewsContentForAI();
+      } else {
+        toolResult = "Error: Unknown tool '${call.name}'";
+      }
+    } catch (e) {
+      toolResult = "Error executing tool: $e";
+    }
+
+    // Add tool result as a System message so AI sees it
+    // In real apps, you might use a 'tool' role if supported, or 'user' role with explicit context.
+    // For simplicity, we treat it as a hidden system injection and re-prompt.
+
+    final resultMsg = ChatMessage(
+      id: const Uuid().v4(),
+      content: "[Tool Result for ${call.name}]: $toolResult\nPlease provide a natural response to the user based on this.",
+      role: MessageRole.system,
+      timestamp: DateTime.now(),
+    );
+
+    state = state.copyWith(
+      messages: [...state.messages, resultMsg],
+    );
+
+    // Recursively call to get the final answer
+    await _processResponse("Based on the tool result, answer the user.");
   }
 
   void _queueTts(String text) {
@@ -188,6 +261,8 @@ final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) {
   final apiKey = ref.watch(apiKeyProvider);
   final ttsService = ref.watch(ttsServiceProvider);
   final voiceConfig = ref.watch(voiceConfigProvider);
+  final calendarService = ref.watch(calendarServiceProvider);
+  final newsService = ref.watch(newsServiceProvider);
 
   return ChatNotifier(
     repository: repo,
@@ -195,5 +270,7 @@ final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) {
     apiKey: apiKey,
     ttsService: ttsService,
     voiceConfig: voiceConfig,
+    calendarService: calendarService,
+    newsService: newsService,
   );
 });
