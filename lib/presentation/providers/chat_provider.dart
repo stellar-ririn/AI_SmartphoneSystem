@@ -1,9 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/entities/chat_message.dart';
-import '../../domain/entities/ai_config.dart';
-import '../../domain/services/tts_service.dart';
-import '../../domain/services/calendar_service.dart';
-import '../../domain/services/news_service.dart';
+import 'package:ai_assistant_app/domain/entities/chat_message.dart';
+import 'package:ai_assistant_app/domain/entities/ai_config.dart';
+import 'package:ai_assistant_app/domain/services/tts_service.dart';
+import 'package:ai_assistant_app/domain/services/calendar_service.dart';
+import 'package:ai_assistant_app/domain/services/news_service.dart';
+import 'package:ai_assistant_app/domain/repositories/ai_repository.dart';
 import '../../data/repositories/ai_repository_impl.dart';
 import '../../data/datasources/remote/gemini_service.dart';
 import '../../data/datasources/remote/openai_service.dart';
@@ -15,8 +16,6 @@ import 'settings_provider.dart';
 import 'assistant_provider.dart';
 
 // --- Data Sources & Repositories Providers ---
-
-import '../../domain/repositories/ai_repository.dart';
 
 final geminiServiceProvider = Provider((ref) => GeminiService());
 final openAIServiceProvider = Provider((ref) => OpenAIService());
