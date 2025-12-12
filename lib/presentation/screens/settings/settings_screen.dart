@@ -39,6 +39,21 @@ class SettingsScreen extends ConsumerWidget {
             decoration: const InputDecoration(border: OutlineInputBorder()),
           ),
           const SizedBox(height: 24),
+          const Text('AI Character Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          TextFormField(
+            initialValue: aiConfig.systemPrompt,
+            maxLines: 5,
+            decoration: const InputDecoration(
+              labelText: 'System Prompt (Persona)',
+              border: OutlineInputBorder(),
+              hintText: 'You are a helpful assistant...',
+            ),
+            onChanged: (value) {
+              ref.read(aiConfigProvider.notifier).state = aiConfig.copyWith(systemPrompt: value);
+            },
+          ),
+          const SizedBox(height: 24),
           const Text('API Keys (Stored Locally)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           _ApiKeyField(

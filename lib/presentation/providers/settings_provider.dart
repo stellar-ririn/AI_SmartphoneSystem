@@ -1,10 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../domain/entities/ai_config.dart';
+import 'chat_provider.dart'; // To update AIConfig
+
 // Keys for Secure Storage
 const _kGeminiKey = 'GEMINI_API_KEY';
 const _kOpenAiKey = 'OPENAI_API_KEY';
 const _kAivisKey = 'AIVIS_API_KEY';
+const _kAIProvider = 'AI_PROVIDER';
+const _kAIModel = 'AI_MODEL';
+const _kAISystemPrompt = 'AI_SYSTEM_PROMPT';
 
 const _storage = FlutterSecureStorage();
 
@@ -25,6 +31,12 @@ class SettingsService {
     await _storage.write(key: _kOpenAiKey, value: openAiKey);
     await _storage.write(key: _kAivisKey, value: aivisKey);
 
+    // Save AI Config as well
+    final config = ref.read(aiConfigProvider);
+    await _storage.write(key: _kAIProvider, value: config.provider.name);
+    await _storage.write(key: _kAIModel, value: config.modelName);
+    await _storage.write(key: _kAISystemPrompt, value: config.systemPrompt);
+
     // Update state
     ref.read(geminiKeyProvider.notifier).state = geminiKey;
     ref.read(openaiKeyProvider.notifier).state = openAiKey;
@@ -39,6 +51,25 @@ class SettingsService {
     ref.read(geminiKeyProvider.notifier).state = gemini;
     ref.read(openaiKeyProvider.notifier).state = openai;
     ref.read(aivisKeyProvider.notifier).state = aivis;
+
+    // Load AI Config
+    final providerStr = await _storage.read(key: _kAIProvider);
+    final modelName = await _storage.read(key: _kAIModel);
+    final systemPrompt = await _storage.read(key: _kAISystemPrompt);
+
+    if (providerStr != null) {
+      final provider = AIProvider.values.firstWhere(
+        (e) => e.name == providerStr,
+        orElse: () => AIProvider.gemini
+      );
+
+      final currentConfig = ref.read(aiConfigProvider);
+      ref.read(aiConfigProvider.notifier).state = currentConfig.copyWith(
+        provider: provider,
+        modelName: modelName ?? currentConfig.modelName,
+        systemPrompt: systemPrompt ?? currentConfig.systemPrompt,
+      );
+    }
   }
 }
 
