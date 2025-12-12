@@ -28,7 +28,12 @@ class SettingsScreen extends ConsumerWidget {
             }).toList(),
             onChanged: (value) {
               if (value != null) {
-                ref.read(aiConfigProvider.notifier).state = aiConfig.copyWith(provider: value);
+                // Update model name based on provider default
+                final defaultModel = value == AIProvider.gemini ? 'gemini-pro' : 'gpt-3.5-turbo';
+                ref.read(aiConfigProvider.notifier).state = aiConfig.copyWith(
+                  provider: value,
+                  modelName: defaultModel,
+                );
               }
             },
             decoration: const InputDecoration(border: OutlineInputBorder()),
@@ -36,31 +41,19 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 24),
           const Text('API Keys (Stored Locally)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-          TextField(
-            decoration: const InputDecoration(
-              labelText: 'Gemini API Key',
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (value) => ref.read(geminiKeyProvider.notifier).state = value,
-            obscureText: true,
+          _ApiKeyField(
+            label: 'Gemini API Key',
+            provider: geminiKeyProvider,
           ),
           const SizedBox(height: 16),
-          TextField(
-            decoration: const InputDecoration(
-              labelText: 'OpenAI API Key',
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (value) => ref.read(openaiKeyProvider.notifier).state = value,
-            obscureText: true,
+          _ApiKeyField(
+            label: 'OpenAI API Key',
+            provider: openaiKeyProvider,
           ),
           const SizedBox(height: 16),
-          TextField(
-            decoration: const InputDecoration(
-              labelText: 'Aivis API Key',
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (value) => ref.read(aivisKeyProvider.notifier).state = value,
-            obscureText: true,
+          _ApiKeyField(
+            label: 'Aivis API Key',
+            provider: aivisKeyProvider,
           ),
           const SizedBox(height: 24),
           ElevatedButton(
@@ -84,6 +77,53 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ApiKeyField extends ConsumerStatefulWidget {
+  final String label;
+  final StateProvider<String> provider;
+
+  const _ApiKeyField({required this.label, required this.provider});
+
+  @override
+  ConsumerState<_ApiKeyField> createState() => _ApiKeyFieldState();
+}
+
+class _ApiKeyFieldState extends ConsumerState<_ApiKeyField> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Listen to provider state to initialize or update the controller text
+    final currentKey = ref.watch(widget.provider);
+
+    // Only update controller if text is empty (initial load) or if it significantly changed externally
+    if (_controller.text != currentKey && currentKey.isNotEmpty) {
+       _controller.text = currentKey;
+    }
+
+    return TextField(
+      controller: _controller,
+      decoration: InputDecoration(
+        labelText: widget.label,
+        border: const OutlineInputBorder(),
+      ),
+      onChanged: (value) => ref.read(widget.provider.notifier).state = value,
+      obscureText: true,
     );
   }
 }
