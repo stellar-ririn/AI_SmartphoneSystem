@@ -38,6 +38,10 @@ class SettingsScreen extends ConsumerWidget {
             },
             decoration: const InputDecoration(border: OutlineInputBorder()),
           ),
+          const SizedBox(height: 16),
+          _ModelNameField(
+            provider: aiConfigProvider,
+          ),
           const SizedBox(height: 24),
           const Text('AI Character Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
@@ -92,6 +96,54 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ModelNameField extends ConsumerStatefulWidget {
+  final StateProvider<AIConfig> provider;
+
+  const _ModelNameField({required this.provider});
+
+  @override
+  ConsumerState<_ModelNameField> createState() => _ModelNameFieldState();
+}
+
+class _ModelNameFieldState extends ConsumerState<_ModelNameField> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final config = ref.watch(widget.provider);
+
+    // Update controller if the model name changes externally (e.g. provider switch)
+    if (_controller.text != config.modelName) {
+      _controller.text = config.modelName;
+    }
+
+    return TextField(
+      controller: _controller,
+      decoration: const InputDecoration(
+        labelText: 'Model Name (e.g. gpt-4o, gemini-1.5-flash)',
+        border: OutlineInputBorder(),
+      ),
+      onChanged: (value) {
+        if (value.isNotEmpty) {
+          ref.read(widget.provider.notifier).state = config.copyWith(modelName: value);
+        }
+      },
     );
   }
 }
