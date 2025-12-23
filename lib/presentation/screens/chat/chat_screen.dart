@@ -131,22 +131,42 @@ class _MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.all(12),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        decoration: BoxDecoration(
-          color: isUser ? Colors.blue : (isStreaming ? Colors.grey[300] : Colors.grey[200]),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          content,
-          style: TextStyle(
-            color: isUser ? Colors.white : Colors.black,
+      child: Row(
+        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!isUser) ...[
+            const CircleAvatar(
+              backgroundColor: Colors.teal,
+              child: Icon(Icons.smart_toy, color: Colors.white),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            padding: const EdgeInsets.all(12),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.7,
+            ),
+            decoration: BoxDecoration(
+              color: isUser ? Colors.blue : (isStreaming ? Colors.grey[300] : Colors.grey[200]),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              content,
+              style: TextStyle(
+                color: isUser ? Colors.white : Colors.black,
+              ),
+            ),
           ),
-        ),
+          if (isUser) ...[
+            const SizedBox(width: 8),
+            const CircleAvatar(
+              backgroundColor: Colors.indigo,
+              child: Icon(Icons.person, color: Colors.white),
+            ),
+          ],
+        ],
       ),
     );
   }

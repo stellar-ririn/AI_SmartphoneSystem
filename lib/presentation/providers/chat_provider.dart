@@ -4,6 +4,7 @@ import 'package:ai_assistant_app/domain/entities/ai_config.dart';
 import 'package:ai_assistant_app/domain/services/tts_service.dart';
 import 'package:ai_assistant_app/domain/services/calendar_service.dart';
 import 'package:ai_assistant_app/domain/services/news_service.dart';
+import 'package:ai_assistant_app/domain/services/alarm_service.dart';
 import 'package:ai_assistant_app/domain/repositories/ai_repository.dart';
 import '../../data/repositories/ai_repository_impl.dart';
 import '../../data/datasources/remote/gemini_service.dart';
@@ -90,16 +91,19 @@ class ChatNotifier extends StateNotifier<ChatState> {
   final AudioPlayerManager _audioManager;
   final CalendarService _calendarService;
   final NewsService _newsService;
+  final AlarmService _alarmService;
 
   ChatNotifier({
     required Ref ref,
     required AIRepository repository,
     required CalendarService calendarService,
     required NewsService newsService,
+    required AlarmService alarmService,
   })  : _ref = ref,
         _repository = repository,
         _calendarService = calendarService,
         _newsService = newsService,
+        _alarmService = alarmService,
         _audioManager = AudioPlayerManager(),
         super(ChatState(messages: []));
 
@@ -241,6 +245,19 @@ class ChatNotifier extends StateNotifier<ChatState> {
         toolResult = "Event '$title' created successfully.";
       } else if (call.name == 'news_summary') {
         toolResult = await _newsService.getNewsContentForAI();
+      } else if (call.name == 'alarm_set') {
+        final timeStr = call.args['time'] ?? '';
+        final message = call.args['message'];
+        final dateTime = DateTime.tryParse(timeStr);
+
+        if (dateTime != null) {
+          final success = await _alarmService.setAlarm(dateTime: dateTime, message: message);
+          toolResult = success
+              ? "Alarm set for $timeStr successfully."
+              : "Failed to set alarm (Platform limitation or error).";
+        } else {
+          toolResult = "Invalid time format for alarm.";
+        }
       } else {
         toolResult = "Error: Unknown tool '${call.name}'";
       }
@@ -289,11 +306,13 @@ final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) {
   // the ChatNotifier (and chat history) from resetting when settings change.
   final calendarService = ref.watch(calendarServiceProvider);
   final newsService = ref.watch(newsServiceProvider);
+  final alarmService = ref.watch(alarmServiceProvider);
 
   return ChatNotifier(
     ref: ref,
     repository: repo,
     calendarService: calendarService,
     newsService: newsService,
+    alarmService: alarmService,
   );
 });

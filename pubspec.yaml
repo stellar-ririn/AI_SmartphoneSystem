@@ -54,7 +54,8 @@ dependencies:
   # Platform
   url_launcher: ^6.2.2
   path_provider: ^2.1.2
-  # android_intent_plus: ^4.0.0 # Add when focusing on Android specific features
+  android_intent_plus: ^4.0.0
+  permission_handler: ^11.3.0 # For notification/alarm permissions if needed
 
 dev_dependencies:
   flutter_test:
