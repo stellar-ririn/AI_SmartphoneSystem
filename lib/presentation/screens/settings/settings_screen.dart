@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/chat_provider.dart'; // For aiConfigProvider
 import 'package:ai_assistant_app/domain/entities/ai_config.dart';
+import '../../providers/voice_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -10,6 +11,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final aiConfig = ref.watch(aiConfigProvider);
+    final voiceConfig = ref.watch(voiceConfigProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -59,6 +61,41 @@ class SettingsScreen extends ConsumerWidget {
               ref.read(notificationSummaryProvider.notifier).state = value;
             } : null,
           ),
+          const SizedBox(height: 24),
+          const Text('Voice Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          DropdownButtonFormField<VoiceType>(
+            value: voiceConfig.type,
+            items: VoiceType.values.map((type) {
+              return DropdownMenuItem(
+                value: type,
+                child: Text(type.toString().split('.').last.toUpperCase()),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                ref.read(voiceConfigProvider.notifier).state = voiceConfig.copyWith(type: value);
+              }
+            },
+            decoration: const InputDecoration(labelText: 'Voice Type', border: OutlineInputBorder()),
+          ),
+          if (voiceConfig.type == VoiceType.aivis) ...[
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: voiceConfig.voiceId,
+              items: const [
+                DropdownMenuItem(value: '888753760', child: Text('Announcer A')),
+                DropdownMenuItem(value: '888753761', child: Text('Announcer B')),
+                DropdownMenuItem(value: '888753762', child: Text('Korosuke')),
+                DropdownMenuItem(value: '888753763', child: Text('Zundamon')),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  ref.read(voiceConfigProvider.notifier).state = voiceConfig.copyWith(voiceId: value);
+                }
+              },
+              decoration: const InputDecoration(labelText: 'Aivis Speaker', border: OutlineInputBorder()),
+            ),
+          ],
           const SizedBox(height: 24),
           const Text('AI Character Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),

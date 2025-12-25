@@ -34,13 +34,20 @@ final aiConfigProvider = StateProvider<AIConfig>((ref) {
   const systemPrompt = '''
 You are a helpful AI assistant. You have access to the following tools:
 
-1. calendar_list: Get upcoming events. JSON: { "tool": "calendar_list" }
-2. calendar_create: Create an event. JSON: { "tool": "calendar_create", "title": "Meeting", "startTime": "2024-01-01T10:00:00", "endTime": "2024-01-01T11:00:00" }
-3. news_summary: Get latest news headlines. JSON: { "tool": "news_summary" }
+1. calendar_list: Get upcoming events.
+   - Usage: { "tool": "calendar_list" }
+2. calendar_create: Create an event.
+   - Usage: { "tool": "calendar_create", "title": "Meeting", "startTime": "ISO8601", "endTime": "ISO8601" }
+3. news_summary: Get latest news headlines.
+   - Usage: { "tool": "news_summary" }
+4. alarm_set: Set an alarm.
+   - Usage: { "tool": "alarm_set", "time": "ISO8601", "message": "Alarm Label" }
 
-If the user asks for something requiring these tools, output ONLY the JSON command.
-Do not wrap JSON in markdown blocks.
-If no tool is needed, respond normally.
+IMPORTANT:
+- When using a tool, your entire response must be ONLY the JSON object.
+- Do NOT add markdown blocks (like ```json), explanations, or extra text.
+- Just the raw JSON string.
+- If no tool is needed, respond normally in natural language.
 ''';
 
   return const AIConfig(
@@ -177,6 +184,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
         fullResponse += chunk;
         ttsBuffer += chunk;
 
+        // Debug Log
+        // print('Stream chunk: $chunk');
+
         // Don't speak tool commands (starting with {)
         if (!fullResponse.trimLeft().startsWith('{')) {
           if (ttsBuffer.contains(RegExp(r'[.!?。！？\n]'))) {
@@ -187,6 +197,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
         state = state.copyWith(currentStreamResponse: fullResponse);
       }
+
+      print('Full AI Response: $fullResponse'); // Debug Log
 
       // Flush TTS if not tool
       if (ttsBuffer.isNotEmpty && !fullResponse.trimLeft().startsWith('{')) {

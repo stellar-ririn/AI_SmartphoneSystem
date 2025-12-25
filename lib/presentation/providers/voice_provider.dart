@@ -21,6 +21,18 @@ class VoiceConfig {
     this.voiceId = '888753760', // Example default ID
     this.speed = 1.0,
   });
+
+  VoiceConfig copyWith({
+    VoiceType? type,
+    String? voiceId,
+    double? speed,
+  }) {
+    return VoiceConfig(
+      type: type ?? this.type,
+      voiceId: voiceId ?? this.voiceId,
+      speed: speed ?? this.speed,
+    );
+  }
 }
 
 final voiceConfigProvider = StateProvider<VoiceConfig>((ref) => const VoiceConfig());
