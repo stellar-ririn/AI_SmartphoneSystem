@@ -80,20 +80,8 @@ class SettingsScreen extends ConsumerWidget {
           ),
           if (voiceConfig.type == VoiceType.aivis) ...[
             const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: voiceConfig.voiceId,
-              items: const [
-                DropdownMenuItem(value: '888753760', child: Text('Announcer A')),
-                DropdownMenuItem(value: '888753761', child: Text('Announcer B')),
-                DropdownMenuItem(value: '888753762', child: Text('Korosuke')),
-                DropdownMenuItem(value: '888753763', child: Text('Zundamon')),
-              ],
-              onChanged: (value) {
-                if (value != null) {
-                  ref.read(voiceConfigProvider.notifier).state = voiceConfig.copyWith(voiceId: value);
-                }
-              },
-              decoration: const InputDecoration(labelText: 'Aivis Speaker', border: OutlineInputBorder()),
+            _AivisSpeakerField(
+              provider: voiceConfigProvider,
             ),
           ],
           const SizedBox(height: 24),
@@ -187,6 +175,54 @@ class _ModelNameFieldState extends ConsumerState<_ModelNameField> {
       onChanged: (value) {
         if (value.isNotEmpty) {
           ref.read(widget.provider.notifier).state = config.copyWith(modelName: value);
+        }
+      },
+    );
+  }
+}
+
+class _AivisSpeakerField extends ConsumerStatefulWidget {
+  final StateProvider<VoiceConfig> provider;
+
+  const _AivisSpeakerField({required this.provider});
+
+  @override
+  ConsumerState<_AivisSpeakerField> createState() => _AivisSpeakerFieldState();
+}
+
+class _AivisSpeakerFieldState extends ConsumerState<_AivisSpeakerField> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final config = ref.watch(widget.provider);
+
+    if (_controller.text != config.voiceId) {
+      _controller.text = config.voiceId;
+    }
+
+    return TextField(
+      controller: _controller,
+      decoration: const InputDecoration(
+        labelText: 'Aivis Speaker ID (UUID)',
+        border: OutlineInputBorder(),
+        hintText: 'e.g. e9339137-2ae3-4d41...',
+      ),
+      onChanged: (value) {
+        if (value.isNotEmpty) {
+          ref.read(widget.provider.notifier).state = config.copyWith(voiceId: value);
         }
       },
     );
