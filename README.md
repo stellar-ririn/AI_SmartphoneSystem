@@ -36,7 +36,14 @@ A specialized AI Assistant application built with Flutter, Riverpod, and Clean A
     ```
     This will automatically configure your `android/app/build.gradle` with the required NDK version.
 
-3.  **Enable Notifications (Android):**
+3.  **Fix Gradle Namespace Issue (If Build Fails):**
+    If you encounter an error like `Namespace not specified` for `flutter_notification_listener`, run:
+    ```bash
+    dart bin/fix_gradle_namespace.dart
+    ```
+    This applies a patch to `android/build.gradle` to handle older packages compatible with newer Gradle versions.
+
+4.  **Enable Notifications (Android):**
     To use the notification reading feature, you must add the following service to your `android/app/src/main/AndroidManifest.xml` inside the `<application>` tag:
 
     ```xml
