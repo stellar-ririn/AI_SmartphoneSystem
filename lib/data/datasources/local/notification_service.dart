@@ -35,7 +35,7 @@ class NotificationService {
 
     try {
       // Initialize background callback
-      await NotificationsListener.initialize(notificationTapBackground);
+      await NotificationsListener.initialize(callbackHandle: notificationTapBackground);
 
       await NotificationsListener.startService(
         foreground: false, // Use background service
