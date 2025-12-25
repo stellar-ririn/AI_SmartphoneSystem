@@ -45,17 +45,8 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 24),
           const Text('AI Character Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          TextFormField(
-            initialValue: aiConfig.systemPrompt,
-            maxLines: 5,
-            decoration: const InputDecoration(
-              labelText: 'System Prompt (Persona)',
-              border: OutlineInputBorder(),
-              hintText: 'You are a helpful assistant...',
-            ),
-            onChanged: (value) {
-              ref.read(aiConfigProvider.notifier).state = aiConfig.copyWith(systemPrompt: value);
-            },
+          _SystemPromptField(
+            provider: aiConfigProvider,
           ),
           const SizedBox(height: 24),
           const Text('API Keys (Stored Locally)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -143,6 +134,60 @@ class _ModelNameFieldState extends ConsumerState<_ModelNameField> {
         if (value.isNotEmpty) {
           ref.read(widget.provider.notifier).state = config.copyWith(modelName: value);
         }
+      },
+    );
+  }
+}
+
+class _SystemPromptField extends ConsumerStatefulWidget {
+  final StateProvider<AIConfig> provider;
+
+  const _SystemPromptField({required this.provider});
+
+  @override
+  ConsumerState<_SystemPromptField> createState() => _SystemPromptFieldState();
+}
+
+class _SystemPromptFieldState extends ConsumerState<_SystemPromptField> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final config = ref.watch(widget.provider);
+
+    // Update controller if the prompt changes externally (e.g. load from storage)
+    if (_controller.text != config.systemPrompt && config.systemPrompt.isNotEmpty) {
+      // Avoid overwriting if user is typing (checking exact equality handles this usually,
+      // but simplistic check is safer if we assume unidirectional flow from state mostly)
+      // Since typing updates state, state updates controller... it loops but text remains same.
+      // However, initial load from empty -> loaded string needs this.
+      if (_controller.text.isEmpty || _controller.text != config.systemPrompt) {
+         _controller.text = config.systemPrompt;
+      }
+    }
+
+    return TextField(
+      controller: _controller,
+      maxLines: 5,
+      decoration: const InputDecoration(
+        labelText: 'System Prompt (Persona)',
+        border: OutlineInputBorder(),
+        hintText: 'You are a helpful assistant...',
+      ),
+      onChanged: (value) {
+        ref.read(widget.provider.notifier).state = config.copyWith(systemPrompt: value);
       },
     );
   }

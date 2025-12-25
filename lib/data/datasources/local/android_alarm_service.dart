@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:android_intent_plus/flag.dart';
-import '../../domain/services/alarm_service.dart';
+import 'package:ai_assistant_app/domain/services/alarm_service.dart';
 
 class AndroidAlarmService implements AlarmService {
   @override
