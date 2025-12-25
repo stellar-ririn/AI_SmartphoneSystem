@@ -43,6 +43,23 @@ class SettingsScreen extends ConsumerWidget {
             provider: aiConfigProvider,
           ),
           const SizedBox(height: 24),
+          const Text('Notification Settings (Android Only)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          SwitchListTile(
+            title: const Text('Read Notifications'),
+            value: ref.watch(notificationEnabledProvider),
+            onChanged: (value) {
+              ref.read(notificationEnabledProvider.notifier).state = value;
+            },
+          ),
+          SwitchListTile(
+            title: const Text('Summarize with AI'),
+            subtitle: const Text('If off, reads raw text.'),
+            value: ref.watch(notificationSummaryProvider),
+            onChanged: ref.watch(notificationEnabledProvider) ? (value) {
+              ref.read(notificationSummaryProvider.notifier).state = value;
+            } : null,
+          ),
+          const SizedBox(height: 24),
           const Text('AI Character Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           _SystemPromptField(

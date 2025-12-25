@@ -36,7 +36,22 @@ A specialized AI Assistant application built with Flutter, Riverpod, and Clean A
     ```
     This will automatically configure your `android/app/build.gradle` with the required NDK version.
 
-3.  **Run the App:**
+3.  **Enable Notifications (Android):**
+    To use the notification reading feature, you must add the following service to your `android/app/src/main/AndroidManifest.xml` inside the `<application>` tag:
+
+    ```xml
+    <service
+        android:name="package.name.of.your.app.NotificationsListenerService"
+        android:label="AI Assistant Listener"
+        android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+        <intent-filter>
+            <action android:name="android.service.notification.NotificationListenerService" />
+        </intent-filter>
+    </service>
+    ```
+    *Note: Replace `package.name.of.your.app` with the actual package name (e.g., `com.example.ai_assistant_app`).*
+
+4.  **Run the App:**
     ```bash
     flutter run
     ```

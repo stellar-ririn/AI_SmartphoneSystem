@@ -285,6 +285,20 @@ class ChatNotifier extends StateNotifier<ChatState> {
     await _processResponse("", isInternal: true);
   }
 
+  Future<void> handleNotification(String text) async {
+    final ttsService = _ref.read(ttsServiceProvider);
+    final shouldSummarize = _ref.read(notificationSummaryProvider);
+
+    if (shouldSummarize) {
+      // Send to AI for summary
+      final prompt = "A new notification arrived: \"$text\". Please summarize this briefly for me.";
+      await sendMessage(prompt); // This will naturally trigger TTS on the response
+    } else {
+      // Read raw text
+      await ttsService.speak(text, voiceId: _ref.read(voiceConfigProvider).voiceId);
+    }
+  }
+
   void _queueTts(String text) {
     final voiceConfig = _ref.read(voiceConfigProvider);
     final ttsService = _ref.read(ttsServiceProvider);

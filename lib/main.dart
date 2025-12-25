@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 import 'presentation/providers/settings_provider.dart';
+import 'presentation/providers/assistant_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,10 +41,31 @@ class _AppStartupState extends ConsumerState<AppStartup> {
   Future<void> _loadSettings() async {
     // Load keys from secure storage on app start
     await ref.read(settingsServiceProvider).loadKeys(ref);
+
+    // Initialize Notification Service based on settings
+    _updateNotificationService();
+  }
+
+  void _updateNotificationService() {
+    final enabled = ref.read(notificationEnabledProvider);
+    final service = ref.read(notificationServiceProvider);
+
+    if (enabled) {
+      service.startListening();
+    } else {
+      service.stopListening();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Listen for changes in notification settings to toggle service
+    ref.listen(notificationEnabledProvider, (previous, next) {
+      if (next != previous) {
+        _updateNotificationService();
+      }
+    });
+
     return const AiAssistantApp();
   }
 }

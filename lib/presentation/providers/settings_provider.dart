@@ -11,6 +11,8 @@ const _kAivisKey = 'AIVIS_API_KEY';
 const _kAIProvider = 'AI_PROVIDER';
 const _kAIModel = 'AI_MODEL';
 const _kAISystemPrompt = 'AI_SYSTEM_PROMPT';
+const _kNotificationEnabled = 'NOTIFICATION_ENABLED';
+const _kNotificationSummary = 'NOTIFICATION_SUMMARY';
 
 const _storage = FlutterSecureStorage();
 
@@ -18,6 +20,9 @@ const _storage = FlutterSecureStorage();
 final geminiKeyProvider = StateProvider<String>((ref) => '');
 final openaiKeyProvider = StateProvider<String>((ref) => '');
 final aivisKeyProvider = StateProvider<String>((ref) => '');
+
+final notificationEnabledProvider = StateProvider<bool>((ref) => false);
+final notificationSummaryProvider = StateProvider<bool>((ref) => false);
 
 // Service class to handle storage operations
 class SettingsService {
@@ -37,6 +42,12 @@ class SettingsService {
     await _storage.write(key: _kAIModel, value: config.modelName);
     await _storage.write(key: _kAISystemPrompt, value: config.systemPrompt);
 
+    // Save Notification Settings
+    final notifEnabled = ref.read(notificationEnabledProvider);
+    final notifSummary = ref.read(notificationSummaryProvider);
+    await _storage.write(key: _kNotificationEnabled, value: notifEnabled.toString());
+    await _storage.write(key: _kNotificationSummary, value: notifSummary.toString());
+
     // Update state
     ref.read(geminiKeyProvider.notifier).state = geminiKey;
     ref.read(openaiKeyProvider.notifier).state = openAiKey;
@@ -48,9 +59,15 @@ class SettingsService {
     final openai = await _storage.read(key: _kOpenAiKey) ?? '';
     final aivis = await _storage.read(key: _kAivisKey) ?? '';
 
+    final notifEnabledStr = await _storage.read(key: _kNotificationEnabled) ?? 'false';
+    final notifSummaryStr = await _storage.read(key: _kNotificationSummary) ?? 'false';
+
     ref.read(geminiKeyProvider.notifier).state = gemini;
     ref.read(openaiKeyProvider.notifier).state = openai;
     ref.read(aivisKeyProvider.notifier).state = aivis;
+
+    ref.read(notificationEnabledProvider.notifier).state = notifEnabledStr == 'true';
+    ref.read(notificationSummaryProvider.notifier).state = notifSummaryStr == 'true';
 
     // Load AI Config
     final providerStr = await _storage.read(key: _kAIProvider);
