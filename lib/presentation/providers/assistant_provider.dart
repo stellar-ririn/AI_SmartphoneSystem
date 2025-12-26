@@ -1,0 +1,29 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ai_assistant_app/domain/services/calendar_service.dart';
+import 'package:ai_assistant_app/domain/services/news_service.dart';
+import 'package:ai_assistant_app/domain/services/alarm_service.dart';
+import '../../data/datasources/remote/google_calendar_service.dart';
+import '../../data/datasources/remote/rss_news_service.dart';
+import '../../data/datasources/local/android_alarm_service.dart';
+import '../../data/datasources/local/notification_service.dart';
+import 'chat_provider.dart';
+
+final calendarServiceProvider = Provider<CalendarService>((ref) {
+  return GoogleCalendarService();
+});
+
+final newsServiceProvider = Provider<NewsService>((ref) {
+  return RssNewsService();
+});
+
+final alarmServiceProvider = Provider<AlarmService>((ref) {
+  return AndroidAlarmService();
+});
+
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  return NotificationService(
+    onNotificationReceived: (text) {
+      ref.read(chatProvider.notifier).handleNotification(text);
+    }
+  );
+});

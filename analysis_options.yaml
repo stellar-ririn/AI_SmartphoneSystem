@@ -1,0 +1,25 @@
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # Stylistic
+    always_declare_return_types: true
+    prefer_const_constructors: true
+    prefer_const_literals_to_create_immutables: true
+    prefer_final_locals: true
+    unnecessary_this: true
+    prefer_single_quotes: true
+
+    # Error prevention
+    avoid_empty_else: true
+    avoid_print: true
+    cancel_subscriptions: true
+    close_sinks: true
+
+    # Riverpod specific (good practice)
+    # avoid_manual_providers_as_generated_provider_dependency: true
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
